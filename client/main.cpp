@@ -7,6 +7,9 @@
 #include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
+#include <Poco/JSON/Parser.h>
+#include <Poco/JSON/Object.h>
+#include <Poco/JSON/JSONException.h>
 
 using namespace Poco::Net;
 
@@ -56,6 +59,28 @@ std::string fetchWeather(const std::string& host, unsigned short port, const std
     return body;
 }
 
+// Разбирает JSON-ответ сервера и печатает результат.
+// Возвращает true, если ответ успешный (статус 200).
+bool printResponse(int status, const std::string& body) {
+    Poco::JSON::Parser parser;
+    Poco::Dynamic::Var parsed = parser.parse(body);
+    Poco::JSON::Object::Ptr obj = parsed.extract<Poco::JSON::Object::Ptr>();
+
+    if (status != 200) {
+        // Сервер сообщает причину в поле "error".
+        std::string message = obj->optValue<std::string>("error", "неизвестная ошибка");
+        std::cerr << "Сервер вернул ошибку (" << status << "): " << message << std::endl;
+        return false;
+    }
+
+    std::string city = obj->optValue<std::string>("city", "?");
+    Poco::JSON::Array::Ptr days = obj->getArray("days");
+    size_t count = days ? days->size() : 0;
+
+    std::cout << "Прогноз погоды: " << city << std::endl;
+    std::cout << "Получено дней: " << count << std::endl;
+    return true;
+}
 
 int main(int argc, char* argv[]) {
     std::string city = readCity(argc, argv);
@@ -66,17 +91,16 @@ int main(int argc, char* argv[]) {
     }
 
     std::string path = buildRequestPath(city);
+
     try {
         int status = 0;
-        std::string body = fetchWeather("localhost", 8080, path, status);
-
-        std::cout << "Статус: " << status << std::endl;
-        std::cout << "Ответ: " << body << std::endl;
-    }
-    catch (const Poco::Exception& e) {
+        std::string body = fetchWeather("127.0.0.1", 8080, path, status);
+        return printResponse(status, body) ? 0 : 1;
+    } catch (const Poco::JSON::JSONException& e) {
+        std::cerr << "Некорректный ответ сервера: " << e.displayText() << std::endl;
+        return 1;
+    } catch (const Poco::Exception& e) {
         std::cerr << "Ошибка соединения с сервером: " << e.displayText() << std::endl;
         return 1;
     }
-
-    return 0;
 }

@@ -9,4 +9,4 @@ curl -i "http://localhost:8080/weather"               # 400
 curl -i "http://localhost:8080/abc"                   # 404
 ```
 
-установить ss, socat
+слушать порт lsof -i: 8080
