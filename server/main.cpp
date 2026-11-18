@@ -40,7 +40,7 @@ using namespace Poco::Net;
 // Если статус не 200, бросает исключение.
 std::string httpsGet(const std::string& host, const std::string& pathAndQuery) {
     HTTPSClientSession session(host, 443);
-    session.setTimeout(Poco::Timespan(10, 0));
+    session.setTimeout(Poco::Timespan(5, 0));
 
     HTTPRequest request(HTTPRequest::HTTP_GET, pathAndQuery, HTTPMessage::HTTP_1_1);
     request.set("User-Agent", "weather-server");
