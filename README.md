@@ -8,3 +8,5 @@ curl -i "http://localhost:8080/weather?city=Moscow"   # 200 и заглушка
 curl -i "http://localhost:8080/weather"               # 400
 curl -i "http://localhost:8080/abc"                   # 404
 ```
+
+установить ss, socat
