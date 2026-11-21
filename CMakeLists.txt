@@ -6,17 +6,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Poco REQUIRED COMPONENTS Foundation Net NetSSL JSON Util)
 
-add_executable(weather_server server/main.cpp)
-target_link_libraries(
-    weather_server PRIVATE
-    Poco::Foundation Poco::Net Poco::NetSSL Poco::JSON Poco::Util
-)
+add_executable(weather_server
+    server/main.cpp
+    server/WeatherHandler.cpp
+    server/WeatherService.cpp
+    server/HttpsClient.cpp
+    server/JsonResponse.cpp
+    server/Logger.cpp)
+target_link_libraries(weather_server PRIVATE
+    Poco::Foundation Poco::Net Poco::NetSSL Poco::JSON Poco::Util)
 
-add_executable(weather_client client/main.cpp)
-target_link_libraries(
-    weather_client PRIVATE
-    Poco::Foundation Poco::Net Poco::JSON
-)
+add_executable(weather_client
+    client/main.cpp
+    client/InputReader.cpp
+    client/WeatherClient.cpp
+    client/TablePrinter.cpp)
+target_link_libraries(weather_client PRIVATE
+    Poco::Foundation Poco::Net Poco::JSON)
 
 # ---------- Тесты (ctest) ----------
 enable_testing()

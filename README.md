@@ -182,10 +182,19 @@ Workflow GitHub Actions (`.github/workflows/ci.yml`) при каждом push и
 .
 ├── CMakeLists.txt
 ├── README.md
-├── client/
-│   └── main.cpp            # клиент
-├── server/
-│   └── main.cpp            # сервер
+├──server/
+    ├── main.cpp            # точка входа: SSL, HTTPServer на порту 8080
+    ├── WeatherHandler.h/.cpp   # обработка запроса GET /weather (+ фабрика обработчиков)
+    ├── WeatherService.h/.cpp   # бизнес-логика: geocode(), getForecast()
+    ├── WeatherTypes.h          # структуры Location и DayForecast
+    ├── HttpsClient.h/.cpp      # httpsGet() с таймаутом 5 с и одной повторной попыткой
+    ├── JsonResponse.h/.cpp     # sendJson(), sendError()
+    └── Logger.h/.cpp           # потокобезопасный logLine()
+├──client/
+    ├── main.cpp            # точка входа: прочитать город, запросить, вывести
+    ├── InputReader.h/.cpp      # readCity()
+    ├── WeatherClient.h/.cpp    # buildRequestPath(), fetchWeather()
+    └── TablePrinter.h/.cpp     # разбор JSON и вывод таблицы (UTF-8 выравнивание внутри)
 ├── tests/
 │   ├── server_start.sh     # запуск сервера перед тестами
 │   ├── server_stop.sh      # остановка сервера после тестов
