@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <mutex>
 #include "Poco/Net/HTTPServer.h"
 #include "Poco/Net/HTTPRequestHandler.h"
 #include "Poco/Net/HTTPRequestHandlerFactory.h"
@@ -167,11 +169,23 @@ void sendError(HTTPServerResponse& response, HTTPResponse::HTTPStatus status,
     sendJson(response, status, obj);
 }
 
+// Потокобезопасная печать одной строки лога.
+void logLine(const std::string& line) {
+    static std::mutex m;
+    std::lock_guard<std::mutex> lock(m);
+    std::cout << line << std::endl;
+}
+
 class WeatherRequestHandler: public HTTPRequestHandler
 {
 public:
     void handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) override {
     Poco::URI uri(request.getURI());
+
+    if (request.getMethod() != HTTPRequest::HTTP_GET) {
+        sendError(response, HTTPResponse::HTTP_METHOD_NOT_ALLOWED, "only GET is allowed");
+        return;
+    }
 
     if (uri.getPath() != "/weather") {
         sendError(response, HTTPResponse::HTTP_NOT_FOUND, "not found");
@@ -188,12 +202,17 @@ public:
         return;
     }
 
-    std::cout << "Request for city: " << city << std::endl;
+    auto start = std::chrono::steady_clock::now();
+    auto logDone = [&](const std::string& result) {
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - start).count();
+        logLine("[" + city + "] " + result + " (" + std::to_string(ms) + " мс)");
+    };
 
     try {
         Location loc;
         if (!geocode(city, loc)) {
-            std::cout << "  город не найден" << std::endl;
+            logDone("город не найден");
             sendError(response, HTTPResponse::HTTP_NOT_FOUND, "city not found");
             return;
         }
@@ -222,8 +241,9 @@ public:
         result.set("longitude", loc.longitude);
         result.set("days", days);
         sendJson(response, HTTPResponse::HTTP_OK, result);
+        logDone("OK, дней: " + std::to_string(forecast.size()));
     } catch (const Poco::Exception& e) {
-        std::cout << "  ошибка: " << e.displayText() << std::endl;
+        logDone("ошибка: " + e.displayText());
         sendError(response, HTTPResponse::HTTP_BAD_GATEWAY, "weather service unavailable");
     }
 }
