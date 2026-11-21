@@ -40,7 +40,7 @@ using namespace Poco::Net;
 
 // Выполняет HTTPS GET-запрос и возвращает тело ответа.
 // Если статус не 200, бросает исключение.
-std::string httpsGet(const std::string& host, const std::string& pathAndQuery) {
+std::string httpsGetOnce(const std::string& host, const std::string& pathAndQuery) {
     HTTPSClientSession session(host, 443);
     session.setTimeout(Poco::Timespan(5, 0));
 
@@ -59,6 +59,17 @@ std::string httpsGet(const std::string& host, const std::string& pathAndQuery) {
     std::string body;
     Poco::StreamCopier::copyToString(bodyStream, body);
     return body;
+}
+
+// Повторяет запрос один раз, если внешний API не ответил вовремя.
+std::string httpsGet(const std::string& host, const std::string& pathAndQuery) {
+    for (int attempt = 1;; ++attempt) {
+        try {
+            return httpsGetOnce(host, pathAndQuery);
+        } catch (const Poco::TimeoutException&) {
+            if (attempt >= 2) throw;
+        }
+    }
 }
 
 // Возвращает «сырой» JSON геокодинга для названия города.

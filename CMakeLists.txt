@@ -59,4 +59,10 @@ set_tests_properties(client_moscow PROPERTIES
 add_test(NAME client_unknown_city COMMAND weather_client asdfgh)
 set_tests_properties(client_unknown_city PROPERTIES
     FIXTURES_REQUIRED server
-    WILL_FAIL TRUE)
+    PASS_REGULAR_EXPRESSION "city not found")
+
+# Тесты, которым нужен внешний интернет (Open-Meteo)
+set_tests_properties(
+    http_moscow http_cyrillic http_space_in_name http_unknown_city
+    client_moscow client_unknown_city
+    PROPERTIES LABELS network)
