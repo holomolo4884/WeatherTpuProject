@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установить зависимости (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libpoco-dev libssl-dev
+
+      - name: Установить зависимости (macOS)
+        if: runner.os == 'macOS'
+        run: brew install poco openssl@3
+
+      - name: Конфигурация (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Конфигурация (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+            -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+
+      - name: Сборка
+        run: cmake --build build --parallel
+
+      - name: Тесты без сети
+        run: ctest --test-dir build -LE network --output-on-failure
+
+      - name: Тесты с внешним API (Open-Meteo)
+        # Не роняют сборку: внешний сервис может быть временно недоступен.
+        continue-on-error: true
+        run: ctest --test-dir build -L network --output-on-failure --repeat until-pass:3
+
+      - name: Лог сервера (при падении)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-log-${{ matrix.os }}
+          path: build/server.pid.log
